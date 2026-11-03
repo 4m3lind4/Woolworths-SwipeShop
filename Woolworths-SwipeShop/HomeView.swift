@@ -37,25 +37,8 @@ struct HomeView: View {
                 categories
                     .padding(.top, 22)
 
-                Button {
-                    model.path.append(.bundles)
-                } label: {
-                    HStack(spacing: 6.3) {
-                        Text("swipe shop")
-                            .font(.app(13.6, .semibold))
-                        Image("arrow-right-green")
-                    }
-                    .foregroundStyle(Palette.greenAlt)
-                    .frame(width: 125, height: 30.4)
-                    .background(.white, in: .capsule)
-                    .overlay(Capsule().stroke(Palette.greenAlt, lineWidth: 1.05))
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.top, 4.2)
-
                 rewardsRow
-                    .padding(.top, 3.6)
+                    .padding(.top, 14)
 
                 promotions
                     .padding(.top, 28.3)
@@ -109,19 +92,14 @@ struct HomeView: View {
 
             Spacer(minLength: 8)
 
-            HStack(spacing: 25.2) {
+            HStack(spacing: 20) {
                 Image("icon-message")
-                Image("icon-shopping-cart")
-                    .overlay(alignment: .topTrailing) {
-                        if model.cartCount > 0 {
-                            Text("\(model.cartCount)")
-                                .font(.app(10, .bold))
-                                .foregroundStyle(.white)
-                                .frame(minWidth: 16, minHeight: 16)
-                                .background(Palette.points, in: .circle)
-                                .offset(x: 8, y: -8)
-                        }
-                    }
+                Button {
+                    model.openCart()
+                } label: {
+                    CartIcon(count: model.cartCount)
+                }
+                .buttonStyle(.plain)
             }
             .frame(width: 105, height: 45.1)
             .background(.white, in: .capsule)

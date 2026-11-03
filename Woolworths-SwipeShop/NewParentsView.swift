@@ -85,8 +85,8 @@ struct NewParentsView: View {
 
     @ViewBuilder
     private func card(for bundle: ParentBundle, in category: BundleCategory) -> some View {
-        let card = BundleCard(bundle: bundle, tint: category.tint, icon: category.icon) {
-            model.cartCount += 1
+        let card = BundleCard(bundle: bundle) {
+            model.add(bundle)
         }
         if bundle.opensDetail {
             // A gesture rather than a Button so the card's own "+" button keeps its taps.
@@ -101,18 +101,22 @@ struct NewParentsView: View {
 
 private struct BundleCard: View {
     let bundle: ParentBundle
-    let tint: Color
-    let icon: String
     let onAdd: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Figma places the 24.6pt glyph at the top-left of a 45pt box centred in the image well.
-            Image(icon)
-                .frame(width: 45.1, height: 45.1, alignment: .topLeading)
-                .frame(maxWidth: .infinity)
-                .frame(height: 98.5)
-                .background(tint)
+            Group {
+                if let image = bundle.image {
+                    Image(image)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(10)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 98.5)
+            .background(.white)
+            .overlay(alignment: .bottom) { Divider() }
 
             VStack(alignment: .leading, spacing: 4.1) {
                 Text(bundle.name)
@@ -132,6 +136,7 @@ private struct BundleCard: View {
                         Image("icon-plus")
                             .frame(width: 30.8, height: 30.8)
                             .background(Palette.green, in: .circle)
+                            .contentShape(.circle)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Add \(bundle.name) to cart")

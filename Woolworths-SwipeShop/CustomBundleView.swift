@@ -18,12 +18,17 @@ struct CustomBundleView: View {
             VStack(alignment: .leading, spacing: 10.3) {
                 SectionHeader(title: "Personalised")
 
-                PersonalisedCard {
+                PersonalisedCard(images: model.customBundle.prefix(5).map(\.image)) {
                     ForEach(model.customBundle) { product in
                         HStack(spacing: 10) {
+                            Image(product.image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 32, height: 32)
                             Text(product.name)
                                 .font(.caption2)
                                 .foregroundStyle(Palette.ink)
+                                .lineLimit(2)
                             Spacer()
                             Text("x1")
                                 .font(.caption2)
@@ -32,7 +37,6 @@ struct CustomBundleView: View {
                                 .font(.caption2)
                                 .foregroundStyle(Palette.ink)
                         }
-                        .padding(.vertical, 4)
                         Divider()
                     }
                     if model.customBundle.isEmpty {
@@ -86,9 +90,9 @@ struct CustomBundleView: View {
             CartToolbarItem()
         }
         .fullScreenCover(isPresented: $isSwiping) {
-            SwipeShopView(products: SwipeProduct.nappyChangeEssentials) { loved in
+            SwipeShopView(items: BundleItem.nappyChangeEssentials) { chosen in
                 isSwiping = false
-                model.customBundle = loved
+                model.customBundle = chosen
             }
         }
     }
@@ -96,7 +100,7 @@ struct CustomBundleView: View {
 
 #Preview {
     let model = AppModel()
-    model.customBundle = SwipeProduct.nappyChangeEssentials
+    model.customBundle = BundleItem.nappyChangeEssentials.map { $0.options[0] }
     return NavigationStack { CustomBundleView() }
         .environment(model)
 }

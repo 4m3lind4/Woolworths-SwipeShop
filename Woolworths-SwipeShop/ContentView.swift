@@ -26,6 +26,7 @@ struct ContentView: View {
                             case .newParents: NewParentsView()
                             case .bundleDetail: BundleDetailView()
                             case .customBundle: CustomBundleView()
+                            case .cart: CartView()
                             }
                         }
                 }

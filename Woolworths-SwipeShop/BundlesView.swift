@@ -89,9 +89,9 @@ struct BundlesView: View {
     private var madeForYou: some View {
         ZStack(alignment: .topLeading) {
             Palette.tileFill
-            Text("ADD IMAGE")
+            ProductCollage(images: ["product-615980", "product-6007813", "product-309608", "product-140789"], size: 104)
                 .frame(maxWidth: .infinity)
-                .padding(.top, 80)
+                .padding(.top, 34)
             Text("Made for you")
                 .padding(.leading, 8.8)
                 .padding(.top, 169)

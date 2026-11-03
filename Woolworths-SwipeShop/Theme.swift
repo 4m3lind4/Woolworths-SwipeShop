@@ -24,6 +24,11 @@ enum Palette {
     static let points = Color(hex: 0xE35205)
     static let success = Color(hex: 0x1E9E5A)
     static let swipeBackground = Color(hex: 0xF2F2F2)
+    // Woolworths app promotion colours (from the product search tags).
+    static let saveYellow = Color(hex: 0xFFDD00)
+    static let specialRed = Color(hex: 0xC20016)
+    static let checkoutGreen = Color(hex: 0x178841)
+    static let sectionFill = Color(hex: 0xF2F2F2)
 }
 
 extension Color {
@@ -78,26 +83,141 @@ extension ArtworkCrop {
     }
 }
 
-/// Green cart used in the trailing slot of every pushed screen's toolbar.
+/// Filled green trolley with the Woolworths-style count badge (white disc, green outline).
+struct CartIcon: View {
+    let count: Int
+
+    var body: some View {
+        Image(systemName: "cart.fill")
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(Palette.green)
+            .frame(width: 34, height: 34)
+            // Drawn inside the frame so a glass toolbar background doesn't clip it.
+            .overlay(alignment: .topTrailing) {
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.app(9, .bold))
+                        .foregroundStyle(Palette.green)
+                        .padding(.horizontal, 3)
+                        .frame(minWidth: 15, minHeight: 15)
+                        .background(.white, in: .capsule)
+                        .overlay(Capsule().stroke(Palette.green, lineWidth: 1.2))
+                }
+            }
+            .accessibilityElement()
+            .accessibilityLabel("Cart, \(count) items")
+    }
+}
+
+/// Cart button in the trailing slot of every pushed screen's toolbar.
 struct CartToolbarItem: ToolbarContent {
     @Environment(AppModel.self) private var model
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Image("icon-cart-green")
-                .frame(width: 34, height: 34)
-                // Drawn inside the button's bounds so the glass background doesn't clip it.
-                .overlay(alignment: .topTrailing) {
-                    if model.cartCount > 0 {
-                        Text("\(model.cartCount)")
-                            .font(.app(9, .bold))
-                            .foregroundStyle(.white)
-                            .frame(minWidth: 14, minHeight: 14)
-                            .background(Palette.points, in: .capsule)
-                    }
-                }
-                .accessibilityLabel("Cart, \(model.cartCount) items")
+            Button {
+                model.openCart()
+            } label: {
+                CartIcon(count: model.cartCount)
+            }
         }
+    }
+}
+
+/// "SAVE $6.80" / "LOWER SHELF PRICE" / "EVERYDAY LOW PRICE" label, coloured as in the Woolworths app.
+struct ProductTagView: View {
+    let tag: ProductTag
+
+    var body: some View {
+        Text(tag.text)
+            .font(.app(12, .medium))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(background, in: .rect(cornerRadius: 2))
+            .overlay(RoundedRectangle(cornerRadius: 2).stroke(border, lineWidth: 1))
+    }
+
+    private var foreground: Color {
+        switch tag.style {
+        case .save: .black
+        case .lowerShelf: Palette.specialRed
+        case .everydayLow: .white
+        }
+    }
+
+    private var background: Color {
+        switch tag.style {
+        case .save: Palette.saveYellow
+        case .lowerShelf: .white
+        case .everydayLow: Palette.specialRed
+        }
+    }
+
+    private var border: Color {
+        tag.style == .save ? Palette.saveYellow : Palette.specialRed
+    }
+}
+
+/// Price with superscript cents, e.g. $9⁰⁰.
+struct ShelfPrice: View {
+    let price: Double
+    var size: CGFloat = 34
+
+    var body: some View {
+        let cents = Int((price * 100).rounded())
+        HStack(alignment: .top, spacing: 1) {
+            Text("$\(cents / 100)")
+                .font(.app(size, .bold))
+            Text(String(format: "%02d", cents % 100))
+                .font(.app(size * 0.45, .bold))
+                .padding(.top, size * 0.14)
+        }
+        .foregroundStyle(Palette.ink)
+        .accessibilityElement()
+        .accessibilityLabel(price.currency)
+    }
+}
+
+/// Green "40% Off" roundel.
+struct PercentOffRoundel: View {
+    let percent: Int
+    var size: CGFloat = 52
+
+    var body: some View {
+        VStack(spacing: -2) {
+            Text("\(percent)%")
+                .font(.app(size * 0.32, .heavy))
+            Text("Off")
+                .font(.app(size * 0.2, .bold))
+        }
+        .foregroundStyle(.black)
+        .frame(width: size, height: size)
+        .background(.white, in: .circle)
+        .overlay(Circle().stroke(Palette.green, lineWidth: size * 0.07))
+    }
+}
+
+/// Overlapping packshots used where the lo-fi design had "ADD IMAGE" placeholders.
+struct ProductCollage: View {
+    let images: [String]
+    var size: CGFloat = 96
+
+    var body: some View {
+        HStack(spacing: -size * 0.28) {
+            ForEach(Array(images.enumerated()), id: \.offset) { index, image in
+                Image(image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(8)
+                    .frame(width: size, height: size)
+                    .background(.white, in: .rect(cornerRadius: 14))
+                    .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+                    .rotationEffect(.degrees(Double(index - images.count / 2) * 4))
+                    .zIndex(Double(images.count - abs(index - images.count / 2)))
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 

@@ -2,48 +2,57 @@
 //  SwipeShopView.swift
 //  Woolworths-SwipeShop
 //
-//  Figma: "4 · Swipe – Nappies" — swipe right to keep, left to remove, or substitute.
+//  Figma: "4 · Swipe – Nappies". Swipe right to buy, left to remove,
+//  up for another product option and down to go back to the previous one.
 //
 
 import SwiftUI
 
 private enum SwipeDecision {
-    case love, remove
+    case buy, remove
+}
+
+private enum SwapDirection {
+    case up, down
 }
 
 private struct SwipeStep {
-    let index: Int
+    let itemIndex: Int
+    let optionIndex: Int
     let decision: SwipeDecision
-    let product: SwipeProduct
 }
 
 struct SwipeShopView: View {
-    let products: [SwipeProduct]
-    let onFinish: ([SwipeProduct]) -> Void
+    let items: [BundleItem]
+    let onFinish: ([ShopProduct]) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var deck: [SwipeProduct]
-    @State private var index = 0
+    @State private var itemIndex = 0
+    @State private var optionIndex: [Int]
     @State private var history: [SwipeStep] = []
     @State private var drag: CGSize = .zero
+    @State private var swap: SwapDirection?
 
-    init(products: [SwipeProduct], onFinish: @escaping ([SwipeProduct]) -> Void) {
-        self.products = products
+    init(items: [BundleItem], onFinish: @escaping ([ShopProduct]) -> Void) {
+        self.items = items
         self.onFinish = onFinish
-        _deck = State(initialValue: products)
+        _optionIndex = State(initialValue: Array(repeating: 0, count: items.count))
     }
 
-    private var current: SwipeProduct? { deck.indices.contains(index) ? deck[index] : nil }
-    private var loved: [SwipeProduct] {
-        history.filter { $0.decision == .love }.map(\.product)
+    private var currentItem: BundleItem? { items.indices.contains(itemIndex) ? items[itemIndex] : nil }
+    private var currentProduct: ShopProduct? {
+        currentItem.map { $0.options[optionIndex[itemIndex]] }
+    }
+    private var chosen: [ShopProduct] {
+        history.filter { $0.decision == .buy }.map { items[$0.itemIndex].options[$0.optionIndex] }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                circleButton("icon-close", label: "Close") { dismiss() }
+                circleButton(systemImage: "xmark", label: "Close") { dismiss() }
                 Spacer()
-                circleButton("icon-undo", label: "Undo") { undo() }
+                circleButton(systemImage: "arrow.uturn.backward", label: "Undo") { undo() }
                     .disabled(history.isEmpty)
                     .opacity(history.isEmpty ? 0.5 : 1)
             }
@@ -53,29 +62,29 @@ struct SwipeShopView: View {
             Text("Bundles")
                 .font(.app(36, .bold))
                 .foregroundStyle(Palette.ink)
-                .padding(.top, 16)
+                .padding(.top, 12)
                 .padding(.horizontal, 20)
 
             HStack {
                 (Text("Current item: ").foregroundStyle(Palette.muted)
-                 + Text(current?.itemLabel ?? "Done").foregroundStyle(Palette.ink))
+                 + Text(currentItem?.name ?? "Done").foregroundStyle(Palette.ink))
                     .font(.app(18, .semibold))
                 Spacer()
-                Text("\(min(index + 1, deck.count)) of \(deck.count)")
+                Text("\(min(itemIndex + 1, items.count)) of \(items.count)")
                     .font(.app(15, .semibold))
                     .foregroundStyle(Palette.green)
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
 
-            ProgressView(value: Double(index), total: Double(max(deck.count, 1)))
+            ProgressView(value: Double(itemIndex), total: Double(max(items.count, 1)))
                 .progressViewStyle(SwipeProgressStyle())
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
 
             cardStack
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.top, 24)
+                .padding(.top, 18)
 
             actions
                 .frame(maxWidth: .infinity)
@@ -88,34 +97,53 @@ struct SwipeShopView: View {
 
     private var cardStack: some View {
         ZStack(alignment: .top) {
-            if deck.count - index > 2 {
-                backCard.frame(width: 290, height: 470).opacity(0.6).offset(y: 36)
+            if items.count - itemIndex > 2 {
+                backCard.frame(width: 290, height: 470).opacity(0.6).offset(y: 30)
             }
-            if deck.count - index > 1 {
-                backCard.frame(width: 318, height: 470).opacity(0.85).offset(y: 20)
+            if items.count - itemIndex > 1 {
+                backCard.frame(width: 318, height: 470).opacity(0.85).offset(y: 16)
             }
-            if let product = current {
-                SwipeCard(product: product, drag: drag)
-                    .id(product.id)
-                    .offset(x: drag.width, y: drag.height * 0.2)
-                    .rotationEffect(.degrees(Double(drag.width / 20)), anchor: .bottom)
-                    .gesture(
-                        DragGesture()
-                            .onChanged { drag = $0.translation }
-                            .onEnded { value in
-                                if value.translation.width > 120 {
-                                    decide(.love)
-                                } else if value.translation.width < -120 {
-                                    decide(.remove)
-                                } else {
-                                    withAnimation(.spring) { drag = .zero }
-                                }
-                            }
-                    )
-                    .transition(.identity)
+            if let item = currentItem, let product = currentProduct {
+                SwipeCard(
+                    product: product,
+                    option: optionIndex[itemIndex],
+                    optionCount: item.options.count,
+                    drag: drag
+                )
+                .id(product.id)
+                .offset(drag)
+                .rotationEffect(.degrees(Double(drag.width / 20)), anchor: .bottom)
+                .gesture(swipeGesture)
+                .transition(cardTransition)
             }
         }
-        .frame(height: 506, alignment: .top)
+        .frame(height: 500, alignment: .top)
+    }
+
+    private var cardTransition: AnyTransition {
+        switch swap {
+        case .up:
+            .asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity))
+        case .down:
+            .asymmetric(insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .bottom).combined(with: .opacity))
+        case nil:
+            .identity
+        }
+    }
+
+    private var swipeGesture: some Gesture {
+        DragGesture()
+            .onChanged { drag = $0.translation }
+            .onEnded { value in
+                let t = value.translation
+                if abs(t.width) > abs(t.height) {
+                    if t.width > 120 { decide(.buy) } else if t.width < -120 { decide(.remove) } else { resetDrag() }
+                } else {
+                    if t.height < -90 { swapOption(.up) } else if t.height > 90 { swapOption(.down) } else { resetDrag() }
+                }
+            }
     }
 
     private var backCard: some View {
@@ -128,23 +156,28 @@ struct SwipeShopView: View {
 
     private var actions: some View {
         HStack(alignment: .top, spacing: 26) {
-            actionButton("icon-close-red", title: "Remove", size: 68, fill: .white, titleColor: Palette.muted) {
+            actionButton(systemImage: "xmark", title: "Remove", size: 68, tint: Color(hex: 0xE0393E),
+                         fill: .white, titleColor: Palette.muted) {
                 decide(.remove)
             }
-            actionButton("icon-substitute", title: "Substitute", size: 54, fill: .white, titleColor: Palette.muted) {
-                substitute()
+            actionButton(systemImage: "arrow.up.arrow.down", title: "Substitute", size: 54, tint: Palette.green,
+                         fill: .white, titleColor: Palette.muted) {
+                swapOption(.up)
             }
-            .disabled(current?.alternatives.isEmpty ?? true)
-            actionButton("icon-heart-white", title: "Love it", size: 68, fill: Palette.green, titleColor: Palette.green) {
-                decide(.love)
+            .disabled((currentItem?.options.count ?? 0) < 2)
+            actionButton(systemImage: "basket.fill", title: "Buy it", size: 68, tint: .white,
+                         fill: Palette.green, titleColor: Palette.green) {
+                decide(.buy)
             }
         }
-        .disabled(current == nil)
+        .disabled(currentItem == nil)
     }
 
-    private func circleButton(_ image: String, label: String, action: @escaping () -> Void) -> some View {
+    private func circleButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(image)
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Palette.ink)
                 .frame(width: 44, height: 44)
                 .background(.white, in: .circle)
                 .shadow(color: .black.opacity(0.08), radius: 2.5, y: 2)
@@ -154,12 +187,14 @@ struct SwipeShopView: View {
     }
 
     private func actionButton(
-        _ image: String, title: String, size: CGFloat, fill: Color, titleColor: Color,
+        systemImage: String, title: String, size: CGFloat, tint: Color, fill: Color, titleColor: Color,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             VStack(spacing: 6) {
-                Image(image)
+                Image(systemName: systemImage)
+                    .font(.system(size: size * 0.38, weight: .semibold))
+                    .foregroundStyle(tint)
                     .frame(width: size, height: size)
                     .background(fill, in: .circle)
                     .shadow(color: .black.opacity(0.12), radius: 4.5, y: 6)
@@ -173,129 +208,150 @@ struct SwipeShopView: View {
 
     // MARK: Logic
 
+    private func resetDrag() {
+        withAnimation(.spring) { drag = .zero }
+    }
+
     private func decide(_ decision: SwipeDecision) {
-        guard let product = current else { return }
+        guard currentItem != nil else { return }
+        swap = nil
         withAnimation(.easeIn(duration: 0.2)) {
-            drag = CGSize(width: decision == .love ? 600 : -600, height: 40)
+            drag = CGSize(width: decision == .buy ? 600 : -600, height: 40)
         }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(200))
-            history.append(SwipeStep(index: index, decision: decision, product: product))
+            history.append(SwipeStep(itemIndex: itemIndex, optionIndex: optionIndex[itemIndex], decision: decision))
             drag = .zero
-            index += 1
-            if index >= deck.count {
-                onFinish(loved)
+            itemIndex += 1
+            if itemIndex >= items.count {
+                onFinish(chosen)
             }
         }
     }
 
-    private func substitute() {
-        guard let product = current, let next = product.alternatives.first else { return }
-        var swapped = next
-        swapped.alternatives = [product]
-        withAnimation(.snappy) { deck[index] = swapped }
+    /// Up shows the next product option (wrapping round); down goes back to the previous one.
+    private func swapOption(_ direction: SwapDirection) {
+        guard let item = currentItem else { return }
+        let current = optionIndex[itemIndex]
+        let next: Int
+        switch direction {
+        case .up: next = (current + 1) % item.options.count
+        case .down: next = current - 1
+        }
+        guard next >= 0, next != current else {
+            resetDrag()
+            return
+        }
+        swap = direction
+        withAnimation(.snappy) {
+            drag = .zero
+            optionIndex[itemIndex] = next
+        }
     }
 
     private func undo() {
         guard let last = history.popLast() else { return }
+        swap = nil
         withAnimation(.snappy) {
-            index = last.index
-            deck[index] = last.product
+            itemIndex = last.itemIndex
+            optionIndex[itemIndex] = last.optionIndex
         }
     }
 }
 
 private struct SwipeCard: View {
-    let product: SwipeProduct
+    let product: ShopProduct
+    let option: Int
+    let optionCount: Int
     let drag: CGSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .topLeading) {
-                LinearGradient(
-                    colors: [Color(hex: 0xEAF4FB), Color(hex: 0xD6EAF8)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                )
-                Image(product.icon)
-                    .offset(x: 100, y: 46)
+                Image(product.image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(.horizontal, 40)
+                    .padding(.top, 36)
+                    .padding(.bottom, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                HStack {
-                    if let badge = product.badge {
-                        HStack(spacing: 5) {
-                            Image("icon-leaf")
-                            Text(badge)
-                                .font(.app(12, .semibold))
-                                .foregroundStyle(Palette.success)
-                        }
-                        .padding(.leading, 10)
-                        .padding(.trailing, 12)
-                        .padding(.vertical, 6)
-                        .background(.white, in: .capsule)
-                    }
-                    Spacer()
-                    Text("+\(product.points) pts")
-                        .font(.app(12, .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Palette.points, in: .capsule)
+                if let tag = product.tag {
+                    ProductTagView(tag: tag)
+                        .padding(14)
                 }
-                .padding(14)
 
-                stamp("YES", color: Palette.success, angle: -14)
+                if let percent = product.percentOff {
+                    PercentOffRoundel(percent: percent)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+
+                optionDots
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(14)
+
+                stamp("BUY", color: Palette.green, angle: -14)
                     .opacity(Double(max(0, drag.width) / 100))
-                    .offset(x: 34, y: 20)
+                    .offset(x: 30, y: 60)
                 stamp("NOPE", color: Color(hex: 0xE0393E), angle: 14)
                     .opacity(Double(max(0, -drag.width) / 100))
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                    .offset(x: -34, y: 20)
+                    .offset(x: -30, y: 60)
             }
-            .frame(height: 240)
+            .frame(height: 250)
             .clipped()
 
-            VStack(alignment: .leading, spacing: 8) {
+            Divider()
+
+            VStack(alignment: .leading, spacing: 4) {
                 Text(product.name)
-                    .font(.app(24, .bold))
+                    .font(.app(17, .semibold))
                     .foregroundStyle(Palette.ink)
                     .lineLimit(2)
-                Text(product.detail)
-                    .font(.app(14))
-                    .foregroundStyle(Palette.muted)
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(product.price.currency)
-                        .font(.app(22, .bold))
-                        .foregroundStyle(Palette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    ShelfPrice(price: product.price)
                     Text(product.unitPrice)
                         .font(.app(13))
                         .foregroundStyle(Palette.muted)
                 }
-                HStack(spacing: 6) {
-                    ForEach(product.traits, id: \.self) { trait in
-                        Text(trait.label)
-                            .font(.app(12, .semibold))
-                            .foregroundStyle(trait.style.foreground)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 5)
-                            .background(trait.style.background, in: .capsule)
-                    }
+                if let wasPrice = product.wasPrice {
+                    Text("Was \(wasPrice.currency)")
+                        .font(.app(14))
+                        .foregroundStyle(Palette.specialRed)
                 }
+                Spacer(minLength: 6)
                 HStack(spacing: 6) {
-                    Image("icon-info")
-                    Text("Would you put this in your trolley?")
-                        .font(.app(13, .medium))
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(.secondary)
+                    Text(optionCount > 1
+                         ? "Would you put this in your trolley? Swipe up for another option."
+                         : "Would you put this in your trolley?")
+                        .font(.app(12, .medium))
                         .foregroundStyle(Palette.muted)
                 }
-                .padding(.top, 4)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 16)
-
-            Spacer(minLength: 0)
+            .padding(.vertical, 14)
         }
         .frame(width: 350, height: 470)
         .background(.white)
         .clipShape(.rect(cornerRadius: 24))
         .shadow(color: .black.opacity(0.14), radius: 15, y: 10)
+    }
+
+    private var optionDots: some View {
+        VStack(spacing: 5) {
+            ForEach(0..<optionCount, id: \.self) { index in
+                Capsule()
+                    .fill(index == option ? Palette.green : Color(.systemGray4))
+                    .frame(width: 6, height: index == option ? 16 : 6)
+            }
+        }
+        .animation(.snappy, value: option)
+        .accessibilityElement()
+        .accessibilityLabel("Option \(option + 1) of \(optionCount)")
     }
 
     private func stamp(_ text: String, color: Color, angle: Double) -> some View {
@@ -304,6 +360,7 @@ private struct SwipeCard: View {
             .foregroundStyle(color)
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
+            .background(.white.opacity(0.85), in: .rect(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(color, lineWidth: 3.5))
             .rotationEffect(.degrees(angle))
     }
@@ -324,5 +381,5 @@ private struct SwipeProgressStyle: ProgressViewStyle {
 }
 
 #Preview {
-    SwipeShopView(products: SwipeProduct.nappyChangeEssentials) { _ in }
+    SwipeShopView(items: BundleItem.nappyChangeEssentials) { _ in }
 }

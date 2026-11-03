@@ -12,10 +12,11 @@ struct BundleDetailView: View {
     @State private var selected: Set<String> = []
     @State private var isSwiping = false
 
-    /// Products to swipe: those for the ticked rows, or the whole bundle when nothing is ticked.
-    private var deck: [SwipeProduct] {
-        let all = SwipeProduct.nappyChangeEssentials
-        return selected.isEmpty ? all : all.filter { selected.contains($0.bundleItem) }
+    private let items = BundleItem.nappyChangeEssentials
+
+    /// Items to swipe: the ticked rows, or the whole bundle when nothing is ticked.
+    private var deck: [BundleItem] {
+        selected.isEmpty ? items : items.filter { selected.contains($0.name) }
     }
 
     var body: some View {
@@ -23,30 +24,37 @@ struct BundleDetailView: View {
             VStack(alignment: .leading, spacing: 10.3) {
                 SectionHeader(title: "Personalised")
 
-                PersonalisedCard(imageCaption: "ADD IMAGE RELATED TO\nNAPPIES") {
-                    ForEach(SwipeProduct.bundleItems, id: \.self) { item in
+                PersonalisedCard(images: items.prefix(4).map { $0.options[0].image }) {
+                    ForEach(items) { item in
+                        let isSelected = selected.contains(item.name)
                         Button {
-                            if selected.contains(item) { selected.remove(item) } else { selected.insert(item) }
+                            if isSelected { selected.remove(item.name) } else { selected.insert(item.name) }
                         } label: {
                             HStack(spacing: 10) {
-                                Image(systemName: selected.contains(item) ? "checkmark.circle.fill" : "circle")
+                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                                     .font(.system(size: 20, weight: .light))
-                                    .foregroundStyle(selected.contains(item) ? Palette.green : Color(.tertiaryLabel))
-                                Text(item)
-                                    .font(.caption2)
+                                    .foregroundStyle(isSelected ? Palette.green : Color(.tertiaryLabel))
+                                Image(item.options[0].image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 32, height: 32)
+                                Text(item.name)
+                                    .font(.caption)
                                     .foregroundStyle(Palette.ink)
                                 Spacer()
+                                Text("\(item.options.count) options")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
                             }
                             .contentShape(.rect)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityAddTraits(selected.contains(item) ? .isSelected : [])
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
                         Divider()
                     }
                 } footer: {
                     Button {
-                        selected = selected.count == SwipeProduct.bundleItems.count
-                            ? [] : Set(SwipeProduct.bundleItems)
+                        selected = selected.count == items.count ? [] : Set(items.map(\.name))
                     } label: {
                         EditItemsLabel()
                     }
@@ -81,9 +89,9 @@ struct BundleDetailView: View {
             CartToolbarItem()
         }
         .fullScreenCover(isPresented: $isSwiping) {
-            SwipeShopView(products: deck) { loved in
+            SwipeShopView(items: deck) { chosen in
                 isSwiping = false
-                model.finishSwiping(with: loved)
+                model.finishSwiping(with: chosen)
             }
         }
     }
@@ -91,24 +99,18 @@ struct BundleDetailView: View {
 
 /// The white "Bundle Selected" card shared by the bundle and custom-bundle screens.
 struct PersonalisedCard<Rows: View, Footer: View>: View {
-    var imageCaption: String? = nil
+    var images: [String] = []
     @ViewBuilder let rows: Rows
     @ViewBuilder let footer: Footer
 
     var body: some View {
         VStack(spacing: 0) {
-            ZStack(alignment: .top) {
+            ZStack {
                 Color(hex: 0xE3F0FA)
-                if let imageCaption {
-                    Text(imageCaption)
-                        .font(.app(15.5, .heavy))
-                        .tracking(-0.35)
-                        .foregroundStyle(Palette.greenInk)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 59.5)
-                }
+                ProductCollage(images: images)
             }
             .frame(height: 150)
+            .clipped()
 
             VStack(alignment: .leading, spacing: 10) {
                 rows
