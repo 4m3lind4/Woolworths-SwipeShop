@@ -235,18 +235,24 @@ struct ScreenTitle: ToolbarContent {
     }
 }
 
-struct SectionHeader: View {
+struct SectionHeader<Accessory: View>: View {
     let title: String
+    @ViewBuilder var accessory: Accessory
 
     var body: some View {
         HStack {
             Text(title)
                 .font(.app(18.5, .semibold))
                 .foregroundStyle(Palette.ink)
+                .accessibilityAddTraits(.isHeader)
             Spacer()
-            Text("See all")
-                .font(.app(14.4, .medium))
-                .foregroundStyle(Palette.green)
+            accessory
         }
+    }
+}
+
+extension SectionHeader where Accessory == EmptyView {
+    init(title: String) {
+        self.init(title: title) { EmptyView() }
     }
 }

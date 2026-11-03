@@ -31,10 +31,6 @@ final class AppModel {
         addLine(CartLine(product: product), quantity: quantity)
     }
 
-    func add(_ bundle: ParentBundle) {
-        addLine(CartLine(bundle: bundle), quantity: 1)
-    }
-
     func addCustomBundleToCart() {
         customBundle.forEach { add($0) }
         path.append(.cart)
@@ -140,12 +136,6 @@ extension CartLine {
         )
     }
 
-    init(bundle: ParentBundle) {
-        self.init(
-            id: "bundle-\(bundle.name)", name: "\(bundle.name) bundle (\(bundle.itemCount) items)",
-            image: bundle.image ?? "", price: bundle.price, wasPrice: nil, tag: nil, category: "BUNDLES"
-        )
-    }
 }
 
 // MARK: - New Parents bundles

@@ -85,68 +85,50 @@ struct NewParentsView: View {
 
     @ViewBuilder
     private func card(for bundle: ParentBundle, in category: BundleCategory) -> some View {
-        let card = BundleCard(bundle: bundle) {
-            model.add(bundle)
-        }
         if bundle.opensDetail {
-            // A gesture rather than a Button so the card's own "+" button keeps its taps.
-            card
-                .onTapGesture { model.path.append(.bundleDetail) }
-                .accessibilityAddTraits(.isButton)
+            Button {
+                model.path.append(.bundleDetail)
+            } label: {
+                BundleCard(bundle: bundle)
+            }
+            .buttonStyle(.plain)
         } else {
-            card
+            BundleCard(bundle: bundle)
         }
     }
 }
 
 private struct BundleCard: View {
     let bundle: ParentBundle
-    let onAdd: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Group {
-                if let image = bundle.image {
-                    Image(image)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(10)
+            Color(.systemGray6)
+                .frame(height: 112)
+                .overlay {
+                    if let image = bundle.image {
+                        Image(image)
+                            .resizable()
+                            .scaledToFill()
+                            .allowsHitTesting(false)
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 98.5)
-            .background(.white)
-            .overlay(alignment: .bottom) { Divider() }
+                .clipped()
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4.1) {
                 Text(bundle.name)
                     .font(.app(14.4, .semibold))
                     .foregroundStyle(Palette.ink)
                     .lineSpacing(1)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(2, reservesSpace: true)
                 Text("\(bundle.itemCount) items")
                     .font(.app(12.3))
                     .foregroundStyle(Palette.muted)
-                HStack {
-                    Text(bundle.price.currency)
-                        .font(.app(15.4, .bold))
-                        .foregroundStyle(Palette.ink)
-                    Spacer()
-                    Button(action: onAdd) {
-                        Image("icon-plus")
-                            .frame(width: 30.8, height: 30.8)
-                            .background(Palette.green, in: .circle)
-                            .contentShape(.circle)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Add \(bundle.name) to cart")
-                }
             }
             .padding(10.3)
-
-            Spacer(minLength: 0)
         }
-        .frame(width: 153.9, height: 205.2)
+        .frame(width: 153.9)
         .background(.white)
         .clipShape(.rect(cornerRadius: 14.4))
         .overlay(RoundedRectangle(cornerRadius: 14.4).stroke(Palette.border, lineWidth: 1))

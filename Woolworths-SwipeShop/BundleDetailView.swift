@@ -11,6 +11,7 @@ struct BundleDetailView: View {
     @Environment(AppModel.self) private var model
     @State private var selected: Set<String> = []
     @State private var isSwiping = false
+    @State private var showingHelp = false
 
     private let items = BundleItem.nappyChangeEssentials
 
@@ -22,7 +23,20 @@ struct BundleDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10.3) {
-                SectionHeader(title: "Personalised")
+                SectionHeader(title: "Personalised") {
+                    Button {
+                        showingHelp = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Palette.green)
+                    }
+                    .accessibilityLabel("How Swipe shop works")
+                    .popover(isPresented: $showingHelp) {
+                        SwipeShopHelp()
+                            .presentationCompactAdaptation(.popover)
+                    }
+                }
 
                 PersonalisedCard(images: items.prefix(4).map { $0.options[0].image }) {
                     ForEach(items) { item in
@@ -94,6 +108,36 @@ struct BundleDetailView: View {
                 model.finishSwiping(with: chosen)
             }
         }
+    }
+}
+
+/// Explains the bundle screen and the swipe gestures before the shopper starts Swipe shop.
+private struct SwipeShopHelp: View {
+    private let steps: [(icon: String, text: String)] = [
+        ("checkmark.circle", "Tap items to choose which ones to swipe. Leave them all unticked to swipe the whole bundle."),
+        ("pencil", "Edit Items ticks or unticks everything at once."),
+        ("hand.point.right", "Swipe right or tap Buy it to add a product to your bundle."),
+        ("xmark", "Swipe left or tap Remove to skip it."),
+        ("arrow.up.arrow.down", "Swipe up for a different product, or down to go back to the previous one."),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("How Swipe shop works")
+                .font(.headline)
+            ForEach(steps, id: \.text) { step in
+                Label {
+                    Text(step.text)
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: step.icon)
+                        .foregroundStyle(Palette.green)
+                }
+            }
+        }
+        .padding()
+        .frame(width: 320)
     }
 }
 

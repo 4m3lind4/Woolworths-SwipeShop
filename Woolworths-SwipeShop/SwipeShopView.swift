@@ -154,19 +154,23 @@ struct SwipeShopView: View {
 
     // MARK: Actions
 
+    private var hasNextOption: Bool {
+        guard let item = currentItem else { return false }
+        return optionIndex[itemIndex] + 1 < item.options.count
+    }
+
     private var actions: some View {
-        HStack(alignment: .top, spacing: 26) {
-            actionButton(systemImage: "xmark", title: "Remove", size: 68, tint: Color(hex: 0xE0393E),
-                         fill: .white, titleColor: Palette.muted) {
+        HStack(alignment: .top, spacing: 30) {
+            actionButton(systemImage: "xmark", title: "Remove", tint: Color(hex: 0xE0393E), fill: .white) {
                 decide(.remove)
             }
-            actionButton(systemImage: "arrow.up.arrow.down", title: "Substitute", size: 54, tint: Palette.green,
-                         fill: .white, titleColor: Palette.muted) {
+            actionButton(systemImage: "arrow.up.arrow.down", title: "Substitute", tint: Palette.green, fill: .white) {
                 swapOption(.up)
             }
-            .disabled((currentItem?.options.count ?? 0) < 2)
-            actionButton(systemImage: "basket.fill", title: "Buy it", size: 68, tint: .white,
-                         fill: Palette.green, titleColor: Palette.green) {
+            .disabled(!hasNextOption)
+            .opacity(hasNextOption ? 1 : 0.4)
+            // Same trolley icon as the cart button, so "Buy it" reads as adding to the cart.
+            actionButton(systemImage: "cart.fill", title: "Buy it", tint: .white, fill: Palette.green) {
                 decide(.buy)
             }
         }
@@ -187,20 +191,19 @@ struct SwipeShopView: View {
     }
 
     private func actionButton(
-        systemImage: String, title: String, size: CGFloat, tint: Color, fill: Color, titleColor: Color,
-        action: @escaping () -> Void
+        systemImage: String, title: String, tint: Color, fill: Color, action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: systemImage)
-                    .font(.system(size: size * 0.38, weight: .semibold))
+                    .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(tint)
-                    .frame(width: size, height: size)
+                    .frame(width: 64, height: 64)
                     .background(fill, in: .circle)
                     .shadow(color: .black.opacity(0.12), radius: 4.5, y: 6)
                 Text(title)
                     .font(.app(12, .semibold))
-                    .foregroundStyle(titleColor)
+                    .foregroundStyle(Palette.muted)
             }
         }
         .buttonStyle(.plain)
@@ -229,16 +232,13 @@ struct SwipeShopView: View {
         }
     }
 
-    /// Up shows the next product option (wrapping round); down goes back to the previous one.
+    /// Up shows the next product option; down goes back to the previous one.
+    /// There's no wrap-around, so swiping up never brings back a product already shown.
     private func swapOption(_ direction: SwapDirection) {
         guard let item = currentItem else { return }
         let current = optionIndex[itemIndex]
-        let next: Int
-        switch direction {
-        case .up: next = (current + 1) % item.options.count
-        case .down: next = current - 1
-        }
-        guard next >= 0, next != current else {
+        let next = direction == .up ? current + 1 : current - 1
+        guard item.options.indices.contains(next) else {
             resetDrag()
             return
         }
@@ -325,9 +325,7 @@ private struct SwipeCard: View {
                 HStack(spacing: 6) {
                     Image(systemName: "info.circle.fill")
                         .foregroundStyle(.secondary)
-                    Text(optionCount > 1
-                         ? "Would you put this in your trolley? Swipe up for another option."
-                         : "Would you put this in your trolley?")
+                    Text(hint)
                         .font(.app(12, .medium))
                         .foregroundStyle(Palette.muted)
                 }
@@ -339,6 +337,13 @@ private struct SwipeCard: View {
         .background(.white)
         .clipShape(.rect(cornerRadius: 24))
         .shadow(color: .black.opacity(0.14), radius: 15, y: 10)
+    }
+
+    private var hint: String {
+        let question = "Would you put this in your trolley?"
+        if option + 1 < optionCount { return "\(question) Swipe up for another option." }
+        if option > 0 { return "\(question) Swipe down for the previous option." }
+        return question
     }
 
     private var optionDots: some View {
