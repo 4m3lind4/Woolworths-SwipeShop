@@ -23,8 +23,10 @@ struct ContentView: View {
                         .navigationDestination(for: Route.self) { route in
                             switch route {
                             case .bundles: BundlesView()
-                            case .newParents: NewParentsView()
-                            case .bundleDetail: BundleDetailView()
+                            case .topic(let id):
+                                if let topic = Topic.find(id) { TopicView(topic: topic) }
+                            case .bundleDetail(let id):
+                                if let bundle = ShopBundle.find(id) { BundleDetailView(bundle: bundle) }
                             case .customBundle: CustomBundleView()
                             case .cart: CartView()
                             }

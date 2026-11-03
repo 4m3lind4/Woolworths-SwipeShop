@@ -2,18 +2,19 @@
 //  BundleDetailView.swift
 //  Woolworths-SwipeShop
 //
-//  Figma: "New Parents Bundles" — Nappy Change Essentials before swiping.
+//  Figma: "New Parents Bundles" — a bundle's items before swiping (Nappy Change Essentials in the design).
 //
 
 import SwiftUI
 
 struct BundleDetailView: View {
     @Environment(AppModel.self) private var model
+    let bundle: ShopBundle
     @State private var selected: Set<String> = []
     @State private var isSwiping = false
     @State private var showingHelp = false
 
-    private let items = BundleItem.nappyChangeEssentials
+    private var items: [BundleItem] { bundle.items }
 
     /// Items to swipe: the ticked rows, or the whole bundle when nothing is ticked.
     private var deck: [BundleItem] {
@@ -99,13 +100,13 @@ struct BundleDetailView: View {
         .background(.white)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ScreenTitle(title: "Nappy Change Essentials")
+            ScreenTitle(title: bundle.name)
             CartToolbarItem()
         }
         .fullScreenCover(isPresented: $isSwiping) {
             SwipeShopView(items: deck) { chosen in
                 isSwiping = false
-                model.finishSwiping(with: chosen)
+                model.finishSwiping(bundle, with: chosen)
             }
         }
     }
@@ -191,6 +192,6 @@ struct EditItemsLabel: View {
 }
 
 #Preview {
-    NavigationStack { BundleDetailView() }
+    NavigationStack { BundleDetailView(bundle: Topic.all[0].categories[1].bundles[0]) }
         .environment(AppModel())
 }

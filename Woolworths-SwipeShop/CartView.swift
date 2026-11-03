@@ -233,7 +233,7 @@ private struct QuantityStepper: View {
 
 #Preview {
     let model = AppModel()
-    BundleItem.nappyChangeEssentials.prefix(3).forEach { model.add($0.options[0]) }
+    Topic.all[0].categories[1].bundles[0].items.prefix(3).forEach { model.add($0.options[0]) }
     return NavigationStack { CartView() }
         .environment(model)
 }

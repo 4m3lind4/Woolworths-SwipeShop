@@ -21,16 +21,13 @@ struct BundlesView: View {
                     .padding(.top, 7)
                 LazyVGrid(columns: columns, spacing: 3.5) {
                     ForEach(ShopperTile.all) { tile in
-                        if tile.opensNewParents {
-                            Button {
-                                model.path.append(.newParents)
-                            } label: {
-                                ShopperTileView(tile: tile)
-                            }
-                            .buttonStyle(.plain)
-                        } else {
+                        Button {
+                            model.path.append(.topic(tile.topicID))
+                        } label: {
                             ShopperTileView(tile: tile)
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Topic.find(tile.topicID)?.title ?? tile.title)
                     }
                 }
                 .padding(.top, 3)
@@ -144,43 +141,43 @@ struct PhotoPiece {
 struct ShopperTile: Identifiable {
     var id: String { title }
     let title: String
+    let topicID: Topic.ID
     var textLeading: CGFloat = 7.8
     var textTop: CGFloat = 41
-    var opensNewParents = false
     let pieces: [PhotoPiece]
 
     static let all: [ShopperTile] = [
-        ShopperTile(title: "New \nParents", opensNewParents: true, pieces: [
+        ShopperTile(title: "New \nParents", topicID: "new-parents", pieces: [
             PhotoPiece(x: 67.5, y: -2.08, width: 66.42, height: 60.07, sourceX: 204.93, sourceY: 478.4),
         ]),
-        ShopperTile(title: "Expecting Parents", pieces: [
+        ShopperTile(title: "Expecting Parents", topicID: "expecting-parents", pieces: [
             PhotoPiece(x: 23.32, y: 0, width: 47.35, height: 31.8, sourceX: 169.59, sourceY: 297.5),
             PhotoPiece(x: 70.66, y: 0, width: 54.41, height: 85.5, sourceX: 216.94, sourceY: 297.5),
         ]),
-        ShopperTile(title: "Students", textLeading: 6.65, textTop: 55.1, pieces: [
+        ShopperTile(title: "Students", topicID: "students", textLeading: 6.65, textTop: 55.1, pieces: [
             PhotoPiece(x: 0, y: 0, width: 68.54, height: 85.5, sourceX: 331.42, sourceY: 297.5,
                        rotation: -58.37, center: CGPoint(x: 34.61 + 54.38, y: -41.6 + 51.6)),
         ]),
-        ShopperTile(title: "Busy Workers", pieces: [
+        ShopperTile(title: "Busy Workers", topicID: "busy-workers", pieces: [
             PhotoPiece(x: 58.65, y: -14, width: 63.6, height: 64.3, sourceX: 78.44, sourceY: 387.24),
         ]),
-        ShopperTile(title: "Remote Workers", textTop: 40.5, pieces: [
+        ShopperTile(title: "Remote Workers", topicID: "remote-workers", textTop: 40.5, pieces: [
             PhotoPiece(x: 16.96, y: 0, width: 41.69, height: 34.63, sourceX: 163.23, sourceY: 387.24),
             PhotoPiece(x: 58.65, y: 0, width: 66.42, height: 61.48, sourceX: 204.93, sourceY: 387.24),
         ]),
-        ShopperTile(title: "Senior\nShoppers", textTop: 38.4, pieces: [
+        ShopperTile(title: "Senior\nShoppers", topicID: "senior-shoppers", textTop: 38.4, pieces: [
             PhotoPiece(x: 70.66, y: 0, width: 54.41, height: 86.21, sourceX: 345.55, sourceY: 387.24),
         ]),
-        ShopperTile(title: "Health\nConcious", textTop: 40, pieces: [
+        ShopperTile(title: "Health\nConcious", topicID: "health-concious", textTop: 40, pieces: [
             PhotoPiece(x: 84.09, y: 46.64, width: 40.99, height: 38.87, sourceX: 101.05, sourceY: 525.04),
             PhotoPiece(x: 77.73, y: 26.15, width: 47.35, height: 20.49, sourceX: 94.69, sourceY: 504.54),
             PhotoPiece(x: 67.13, y: 0, width: 57.95, height: 26.15, sourceX: 84.09, sourceY: 478.4),
         ]),
-        ShopperTile(title: "Vegetarian &\nVegans", textLeading: 8.1, textTop: 40.5, pieces: [
+        ShopperTile(title: "Vegetarian &\nVegans", topicID: "vegetarian-vegans", textLeading: 8.1, textTop: 40.5, pieces: [
             PhotoPiece(x: 0, y: 0, width: 58, height: 86, sourceX: 76.32, sourceY: 297.5,
                        rotation: -75.16, center: CGPoint(x: 44.14 + 49, y: -28 + 39.05)),
         ]),
-        ShopperTile(title: "Pet\nParents", textLeading: 10, textTop: 40, pieces: [
+        ShopperTile(title: "Pet\nParents", topicID: "pet-parents", textLeading: 10, textTop: 40, pieces: [
             PhotoPiece(x: 24.73, y: 0, width: 43.81, height: 26.85, sourceX: 298.91, sourceY: 478.4),
             PhotoPiece(x: 68.54, y: -10.3, width: 56.53, height: 64.3, sourceX: 343.43, sourceY: 478.4),
         ]),

@@ -1,19 +1,22 @@
 //
-//  NewParentsView.swift
+//  TopicView.swift
 //  Woolworths-SwipeShop
 //
-//  Figma: "Page" — New Parents bundles grouped by need.
+//  Figma: "Page" (New Parents) — a shopper topic's bundles grouped by category.
+//  Every topic on the Bundles grid uses this screen.
 //
 
 import SwiftUI
 
-struct NewParentsView: View {
+struct TopicView: View {
     @Environment(AppModel.self) private var model
-    @State private var filter: NewParentsFilter = .all
+    let topic: Topic
+    /// The selected category chip; `nil` shows every category.
+    @State private var filter: TopicCategory.ID?
 
-    private var visibleCategories: [BundleCategory] {
-        guard let id = filter.categoryID else { return BundleCategory.newParents }
-        return BundleCategory.newParents.filter { $0.id == id }
+    private var visibleCategories: [TopicCategory] {
+        guard let filter else { return topic.categories }
+        return topic.categories.filter { $0.id == filter }
     }
 
     var body: some View {
@@ -28,7 +31,12 @@ struct NewParentsView: View {
                         ScrollView(.horizontal) {
                             HStack(alignment: .top, spacing: 10.3) {
                                 ForEach(category.bundles) { bundle in
-                                    card(for: bundle, in: category)
+                                    Button {
+                                        model.path.append(.bundleDetail(bundle.id))
+                                    } label: {
+                                        BundleCard(bundle: bundle)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                             .padding(.horizontal, 16.4)
@@ -55,7 +63,7 @@ struct NewParentsView: View {
         .background(.white)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ScreenTitle(title: "New Parents")
+            ScreenTitle(title: topic.title)
             CartToolbarItem()
         }
     }
@@ -63,19 +71,9 @@ struct NewParentsView: View {
     private var chips: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8.2) {
-                ForEach(NewParentsFilter.allCases) { option in
-                    let selected = option == filter
-                    Button {
-                        withAnimation(.snappy) { filter = option }
-                    } label: {
-                        Text(option.rawValue)
-                            .font(.app(14.4, selected ? .semibold : .medium))
-                            .foregroundStyle(selected ? .white : Palette.ink)
-                            .padding(.horizontal, 14.4)
-                            .padding(.vertical, 9.2)
-                            .background(selected ? Palette.green : Palette.chipFill, in: .capsule)
-                    }
-                    .buttonStyle(.plain)
+                chip("All", selected: filter == nil) { filter = nil }
+                ForEach(topic.categories) { category in
+                    chip(category.title, selected: filter == category.id) { filter = category.id }
                 }
             }
             .padding(.horizontal, 16.4)
@@ -83,23 +81,24 @@ struct NewParentsView: View {
         .scrollIndicators(.hidden)
     }
 
-    @ViewBuilder
-    private func card(for bundle: ParentBundle, in category: BundleCategory) -> some View {
-        if bundle.opensDetail {
-            Button {
-                model.path.append(.bundleDetail)
-            } label: {
-                BundleCard(bundle: bundle)
-            }
-            .buttonStyle(.plain)
-        } else {
-            BundleCard(bundle: bundle)
+    private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            withAnimation(.snappy, action)
+        } label: {
+            Text(title)
+                .font(.app(14.4, selected ? .semibold : .medium))
+                .foregroundStyle(selected ? .white : Palette.ink)
+                .padding(.horizontal, 14.4)
+                .padding(.vertical, 9.2)
+                .background(selected ? Palette.green : Palette.chipFill, in: .capsule)
         }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
 private struct BundleCard: View {
-    let bundle: ParentBundle
+    let bundle: ShopBundle
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -111,6 +110,8 @@ private struct BundleCard: View {
                             .resizable()
                             .scaledToFill()
                             .allowsHitTesting(false)
+                    } else {
+                        ProductCollage(images: Array(bundle.previewImages.prefix(3)), size: 62)
                     }
                 }
                 .clipped()
@@ -122,7 +123,7 @@ private struct BundleCard: View {
                     .foregroundStyle(Palette.ink)
                     .lineSpacing(1)
                     .lineLimit(2, reservesSpace: true)
-                Text("\(bundle.itemCount) items")
+                Text("\(bundle.items.count) items")
                     .font(.app(12.3))
                     .foregroundStyle(Palette.muted)
             }
@@ -137,6 +138,6 @@ private struct BundleCard: View {
 }
 
 #Preview {
-    NavigationStack { NewParentsView() }
+    NavigationStack { TopicView(topic: Topic.all[0]) }
         .environment(AppModel())
 }

@@ -386,5 +386,5 @@ private struct SwipeProgressStyle: ProgressViewStyle {
 }
 
 #Preview {
-    SwipeShopView(items: BundleItem.nappyChangeEssentials) { _ in }
+    SwipeShopView(items: Topic.all[0].categories[1].bundles[0].items) { _ in }
 }

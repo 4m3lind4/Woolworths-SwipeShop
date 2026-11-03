@@ -16,7 +16,7 @@ struct CustomBundleView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10.3) {
-                SectionHeader(title: "Personalised")
+                SectionHeader(title: model.activeBundle?.name ?? "Personalised")
 
                 PersonalisedCard(images: model.customBundle.prefix(5).map(\.image)) {
                     ForEach(model.customBundle) { product in
@@ -90,7 +90,7 @@ struct CustomBundleView: View {
             CartToolbarItem()
         }
         .fullScreenCover(isPresented: $isSwiping) {
-            SwipeShopView(items: BundleItem.nappyChangeEssentials) { chosen in
+            SwipeShopView(items: model.activeBundle?.items ?? []) { chosen in
                 isSwiping = false
                 model.customBundle = chosen
             }
@@ -100,7 +100,9 @@ struct CustomBundleView: View {
 
 #Preview {
     let model = AppModel()
-    model.customBundle = BundleItem.nappyChangeEssentials.map { $0.options[0] }
+    let bundle = Topic.all[0].categories[1].bundles[0]
+    model.activeBundle = bundle
+    model.customBundle = bundle.items.map { $0.options[0] }
     return NavigationStack { CustomBundleView() }
         .environment(model)
 }

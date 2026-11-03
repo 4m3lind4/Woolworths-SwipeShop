@@ -7,8 +7,8 @@ import SwiftUI
 
 enum Route: Hashable {
     case bundles
-    case newParents
-    case bundleDetail
+    case topic(Topic.ID)
+    case bundleDetail(ShopBundle.ID)
     case customBundle
     case cart
 }
@@ -17,12 +17,14 @@ enum Route: Hashable {
 final class AppModel {
     var path: [Route] = []
     var cart: [CartLine] = []
-    /// Products the shopper chose to buy in the last swipe session.
+    /// The bundle the shopper last swiped through, and the products they chose to buy.
+    var activeBundle: ShopBundle?
     var customBundle: [ShopProduct] = []
 
     var cartCount: Int { cart.reduce(0) { $0 + $1.quantity } }
 
-    func finishSwiping(with chosen: [ShopProduct]) {
+    func finishSwiping(_ bundle: ShopBundle, with chosen: [ShopProduct]) {
+        activeBundle = bundle
         customBundle = chosen
         path.append(.customBundle)
     }
@@ -135,70 +137,44 @@ extension CartLine {
             price: product.price, wasPrice: product.wasPrice, tag: product.tag, category: product.category
         )
     }
-
 }
 
-// MARK: - New Parents bundles
+// MARK: - Topics and bundles
 
-struct ParentBundle: Identifiable, Hashable {
-    var id: String { name }
-    let name: String
-    let itemCount: Int
-    let price: Double
-    var opensDetail = false
-
-    var image: String? { BundleImages.byName[name] }
-}
-
-struct BundleCategory: Identifiable {
+/// A shopper type from the Bundles grid (New Parents, Students, Pet Parents…).
+struct Topic: Identifiable, Hashable {
     let id: String
     let title: String
-    let bundles: [ParentBundle]
+    let categories: [TopicCategory]
+
+    static func find(_ id: ID) -> Topic? { all.first { $0.id == id } }
 }
 
-enum NewParentsFilter: String, CaseIterable, Identifiable {
-    case all = "All"
-    case newborn = "Newborn 0–3m"
-    case feeding = "Feeding"
-    case nappyBath = "Nappy & Bath"
-    case sleep = "Sleep"
-    case forParents = "For Parents"
+/// A chip on a topic screen, grouping related bundles.
+struct TopicCategory: Identifiable, Hashable {
+    var id: String { title }
+    let title: String
+    let bundles: [ShopBundle]
+}
 
-    var id: Self { self }
+/// A bundle of items the shopper swipes through.
+struct ShopBundle: Identifiable, Hashable {
+    let id: String
+    let name: String
+    /// Stock photo for the bundle card; bundles without one show their products instead.
+    let image: String?
+    let items: [BundleItem]
 
-    var categoryID: String? {
-        switch self {
-        case .all, .newborn: nil
-        case .feeding: "feeding"
-        case .nappyBath: "nappy"
-        case .sleep: "sleep"
-        case .forParents: "parents"
+    var previewImages: [String] { items.map { $0.options[0].image } }
+
+    static func find(_ id: ID) -> ShopBundle? {
+        for topic in Topic.all {
+            for category in topic.categories {
+                if let bundle = category.bundles.first(where: { $0.id == id }) { return bundle }
+            }
         }
+        return nil
     }
-}
-
-extension BundleCategory {
-    static let newParents: [BundleCategory] = [
-        BundleCategory(id: "feeding", title: "Feeding", bundles: [
-            ParentBundle(name: "Bottle Feeding Kit", itemCount: 9, price: 64),
-            ParentBundle(name: "Breastfeeding Support", itemCount: 7, price: 52.5),
-            ParentBundle(name: "Formula Starter", itemCount: 5, price: 48),
-        ]),
-        BundleCategory(id: "nappy", title: "Nappy & Bath", bundles: [
-            ParentBundle(name: "Nappy Change Essentials", itemCount: 6, price: 58, opensDetail: true),
-            ParentBundle(name: "First Bath Set", itemCount: 8, price: 41.5),
-            ParentBundle(name: "Overnight Nappy Pack", itemCount: 4, price: 39),
-        ]),
-        BundleCategory(id: "sleep", title: "Sleep & Settling", bundles: [
-            ParentBundle(name: "Sleep & Swaddle Set", itemCount: 6, price: 72),
-            ParentBundle(name: "Settling Night Pack", itemCount: 5, price: 44),
-        ]),
-        BundleCategory(id: "parents", title: "For Parents", bundles: [
-            ParentBundle(name: "Recovery Care Kit", itemCount: 10, price: 45),
-            ParentBundle(name: "Easy Meals: Week One", itemCount: 12, price: 68),
-            ParentBundle(name: "Coffee & Snacks Pack", itemCount: 8, price: 29.5),
-        ]),
-    ]
 }
 
 extension Double {
