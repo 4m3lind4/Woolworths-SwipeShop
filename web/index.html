@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Swipe Shop Prototype</title>
+  <meta name="description" content="Web version of the Swipe Shop personalised bundles prototype.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="phone" id="phone">
+      <main class="screen" id="screen" tabindex="-1"></main>
+      <nav class="tabbar" id="tabbar" aria-label="Main"></nav>
+      <div class="overlay" id="overlay" hidden></div>
+    </div>
+    <aside class="about">
+      <h1>Swipe Shop</h1>
+      <p>A clickable prototype of personalised bundles. Start at <strong>Personalised Bundles</strong> on the home screen, pick a shopper type, open a bundle and tap <strong>Swipe shop</strong>.</p>
+      <ul>
+        <li>Swipe right or tap <strong>Buy it</strong> to keep a product</li>
+        <li>Swipe left or tap <strong>Remove</strong> to skip it</li>
+        <li>Swipe up for another option, down to go back</li>
+      </ul>
+      <p class="fine">Prototype for a university case competition. Product names, prices and images come from Woolworths' public product search and may be out of date. Bundle photos are openly licensed; see STOCK_CREDITS.md.</p>
+    </aside>
+  </div>
+  <script src="catalog.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
